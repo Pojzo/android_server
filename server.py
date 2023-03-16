@@ -2,14 +2,15 @@ from config import MAX_CLIENTS
 
 import socket
 import threading
+import asyncio
 
-HOST = '192.168.100.7'
+HOST = '0.0.0.0'
 PORT = 12345
 
 # create a TCP server socket that listens on port 44444 
 
 class TCPServer:
-    def __init__(self, port: int, mode="normal", host: str = 'localhost'): 
+    def __init__(self, port: int, host: str='localhost', mode="normal"): 
         self.host = host
         self.port = port
         self.num_clients = 0
@@ -55,5 +56,5 @@ class TCPServer:
 
 
 
-server = TCPServer(PORT)
+server = TCPServer(PORT, host=HOST, mode="normal") 
 server.listen()
