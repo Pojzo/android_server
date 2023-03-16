@@ -1,0 +1,8 @@
+WINDOW_WIDTH = 600
+WINDOW_HEIGHT = 800
+RESIZABLE = False
+WINDOW_TITLE = "Server GUI"
+
+
+# constants for server
+MAX_CLIENTS = 1
