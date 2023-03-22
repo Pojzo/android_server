@@ -5,7 +5,7 @@ import threading
 import asyncio
 
 HOST = '0.0.0.0'
-PORT = 12345
+PORT = 44444
 
 # create a TCP server socket that listens on port 44444 
 
