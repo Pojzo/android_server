@@ -30,7 +30,7 @@ class Server:
         while True:
             data = await self.loop.run_in_executor(None, input)
 
-            writer.write(data.encode())
+            writer.write((data + '\n').encode())
             print("Sent: ", data)
             await writer.drain()
     
