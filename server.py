@@ -1,60 +1,50 @@
-from config import MAX_CLIENTS
-
-import socket
-import threading
 import asyncio
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format='%(name)s:[%(levelname)s]: %(message)s')
+logger = logging.getLogger('Server')
 
 HOST = '0.0.0.0'
 PORT = 44444
+MAX_CLIENTS = 10
 
-# create a TCP server socket that listens on port 44444 
-
-class TCPServer:
-    def __init__(self, port: int, host: str='localhost', mode="normal"): 
+class Server:
+    def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
-        self.num_clients = 0
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((self.host, self.port))
-        # create a thread to listen for incoming connections
+        self.loop = asyncio.get_event_loop()
 
-    def listen(self) -> None:
-        self.socket.listen(MAX_CLIENTS)
+    async def handle_client_receive(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        print("Starting client receive")
         while True:
-            while self.num_clients >= MAX_CLIENTS:
-                pass
+            data = await reader.read(1024)
+            if not data:
+                logger.info('Client disconnected')
+                break
+            logger.info(f'Received: {data.decode()}')
 
-            client, address = self.socket.accept()
-            self.num_clients += 1
-            client.settimeout(60)
-            threading.Thread(target=self.listen_to_client, args=(client, str(address))).start()
+        writer.close() 
+
+    async def handle_client_send(self, writer: asyncio.StreamWriter):
+        print("Starting user input")
+        while True:
+            data = await self.loop.run_in_executor(None, input)
+
+            writer.write(data.encode())
+            print("Sent: ", data)
+            await writer.drain()
     
-    def listen_to_client(self, client: socket, addr: str) -> None:
-        print(f"Client {addr} connected")
-        # the server always starts by saying "HELLO"
-        client.sendall("HELLO\n".encode())
-        while True:
-            try:
-                data = client.recv(1024).decode()
-            except ConnectionResetError:
-                print("Connection reset by the client")
-                break
-            if data == "BYE":
-                break
-            
-            input_data = input(f"Client {addr} sent: {data}. Enter a response: ")
-            input_data += "\n"
+    async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        logger.info('New client connected')
+        receive_task = asyncio.create_task(self.handle_client_receive(reader, writer))
+        send_task = asyncio.create_task(self.handle_client_send(writer))
+        await asyncio.gather(receive_task, send_task)
 
-            try:
-                client.sendall(input_data.encode())
-            except ConnectionResetError:
-                break
+    async def listen(self):
+        server = await asyncio.start_server(self.handle_client, self.host, self.port)
+        async with server:
+            await server.serve_forever()
 
-        self.num_clients -= 1
-        print("Client disconnected")
-        print("--------------------")
-
-
-
-server = TCPServer(PORT, host=HOST, mode="normal") 
-server.listen()
+if __name__ == '__main__':
+    server = Server(HOST, PORT)
+    server.loop.run_until_complete(server.listen())
